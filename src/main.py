@@ -1,12 +1,12 @@
-# app/main.py
+# src/main.py
 import io
 import os
 from typing import List, Optional
 
-from app.core.utils import format_timestamp
-from app.services.diarization_sortformer_service import diarize_audio
-from app.services.pipeline_service import transcribe_and_diarize
-from app.services.transcription_service import transcribe_audio
+from src.core.utils import format_timestamp
+from src.services.diarization_sortformer_service import diarize_audio
+from src.services.pipeline_service import transcribe_and_diarize
+from src.services.transcription_service import transcribe_audio
 from fastapi import FastAPI, File, Query, UploadFile
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
@@ -141,7 +141,7 @@ async def transcribe_diarize_endpoint(
 async def warmup():
     # whisper
     try:
-        dummy = "/tmp/dummy.wav"
+        dummy = "/data/test-recording.wav"
         import numpy as np
         from scipy.io import wavfile
 
@@ -156,8 +156,16 @@ async def warmup():
         _ = PunctuationModel(model="kredor/punctuate-all")
     except Exception:
         pass
-    # diarization (prefer sortformer path in service)
+    # diarization
     try:
+        from src.services.diarization_sortformer_service import diarize_audio, _load_sortformer
+        _load_sortformer()
+        # quick 0.5s silent wav to initialize kernels/caches
+        import numpy as np
+        from scipy.io import wavfile
+        dummy = "/data/test-recording.wav"
+        sr = 16000
+        wavfile.write(dummy, sr, np.zeros(sr//2, dtype=np.int16))
         diarize_audio(dummy)
     except Exception:
         pass
@@ -166,3 +174,20 @@ async def warmup():
     except Exception:
         pass
     return {"status": "warmed"}
+
+@app.get("/health", summary="Lightweight health probe")
+def health():
+    """Simple liveness/readiness check for orchestrators and manual smoke tests."""
+    uptime = round(time.time() - START_TIME, 2)
+    torch_version = getattr(torch, "__version__", None) if torch else None
+    cuda_version = getattr(torch.version, "cuda", None) if (torch and torch.cuda.is_available()) else None
+    device = "cuda" if (torch and torch.cuda.is_available()) else "cpu"
+    return JSONResponse({
+        "status": "ok",
+        "uptime_seconds": uptime,
+        "python": platform.python_version(),
+        "torch": torch_version,
+        "cuda": cuda_version,
+        "device": device,
+        "pid": os.getpid(),
+    })

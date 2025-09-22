@@ -1,4 +1,4 @@
-# diarization_service.py
+# src/services/diarization_service.py
 
 import json
 import logging

@@ -1,9 +1,9 @@
-# app/services/transcription_service.py
+# src/services/transcription_service.py
 import logging
 
 import torch
 import whisperx
-from app.core.utils import (
+from src.core.utils import (
     LANGUAGES,
     TO_LANGUAGE_CODE,
     WAV2VEC2_LANGS,

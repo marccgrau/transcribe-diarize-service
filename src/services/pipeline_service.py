@@ -1,15 +1,15 @@
-# app/services/pipeline_service.py
+# src/services/pipeline_service.py
 import logging
 import re
 
-from app.core.utils import (
+from src.core.utils import (
     PUNCT_MODEL_LANGS,
     get_realigned_ws_mapping_with_punctuation,
     get_sentences_speaker_mapping,
     get_words_speaker_mapping,
 )
-from app.services.diarization_sortformer_service import diarize_audio
-from app.services.transcription_service import transcribe_audio
+from src.services.diarization_sortformer_service import diarize_audio
+from src.services.transcription_service import transcribe_audio
 from deepmultilingualpunctuation import PunctuationModel
 
 _punct_cache = {}

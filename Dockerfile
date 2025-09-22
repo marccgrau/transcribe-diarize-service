@@ -1,21 +1,27 @@
-# Use an official Python image (with CUDA if GPU support is needed)
-FROM pytorch/pytorch:2.0.1-cuda11.7-cudnn8-runtime
+FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-runtime
 
-# Install system dependencies (ffmpeg and libsndfile for audio processing)
-RUN apt-get update && apt-get install -y ffmpeg libsndfile1 && rm -rf /var/lib/apt/lists/*
+# OS deps for audio I/O
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg libsndfile1 git && \
+    rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
-# Copy requirements and install them
+# 1) install deps first to leverage Docker layer cache
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN python -m pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code
+# 2) copy code
 COPY . /app
 
-# Expose port 8000 for the API
+# Optional: make 'src' importable without --app-dir
+ENV PYTHONPATH=/app
+
 EXPOSE 8000
 
-# Start the Uvicorn server for the FastAPI app
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# A) using --app-dir (no PYTHONPATH needed):
+# CMD ["uvicorn", "main:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]
+
+# B) using fully-qualified module path (PYTHONPATH=/app):
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
