@@ -1,17 +1,12 @@
-# tests/test_transcription.py
+# app/tests/test_transcription.py
 import pytest
+from app.services.transcription_service import _normalize_lang
 
-from transcription_service import process_language_arg
 
-
-def test_process_language_arg_basic():
-    # Test that known language names are converted to codes
-    assert process_language_arg("English", model_name="base") == "en"
-    assert process_language_arg("GERMAN", model_name="large-v2") == "de"
-    # Test that unsupported language raises
+def test_normalize_lang():
+    assert _normalize_lang("English", "base") == "en"
+    assert _normalize_lang("GERMAN", "large-v3") == "de"
     with pytest.raises(ValueError):
-        process_language_arg("Klingon", model_name="base")
-    # Test English-only model behavior
-    # If model is 'base.en', any non-en language input should default to 'en'
-    assert process_language_arg("fr", model_name="base.en") == "en"
-    assert process_language_arg(None, model_name="base.en") == "en"
+        _normalize_lang("Klingon", "base")
+    assert _normalize_lang("fr", "base.en") == "en"
+    assert _normalize_lang(None, "base.en") == "en"

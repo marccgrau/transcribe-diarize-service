@@ -1,35 +1,18 @@
-# tests/test_diarization.py
-from diarization_service import _parse_rttm
+# app/tests/test_diarization.py
+from app.core.utils import get_words_speaker_mapping
 
 
-def test_parse_rttm_line():
-    # Prepare a fake RTTM content for testing
-    fake_rttm_lines = [
-        "SPEAKER fakefile 1 10.000 5.000 <NA> <NA> speaker_0 <NA> <NA>",
-        "SPEAKER fakefile 1 15.000 3.000 <NA> <NA> speaker_1 <NA> <NA>",
+def test_mapping_simple():
+    words = [
+        {"word": "Hi", "start": 0.0, "end": 0.2},
+        {"word": "there.", "start": 0.2, "end": 0.6},
+        {"word": "How", "start": 1.0, "end": 1.2},
+        {"word": "are", "start": 1.2, "end": 1.3},
+        {"word": "you?", "start": 1.3, "end": 1.6},
     ]
-    # Write to a temp file
-    import tempfile
-
-    tmp = tempfile.NamedTemporaryFile(mode="w+", delete=False)
-    for line in fake_rttm_lines:
-        tmp.write(line + "\n")
-    tmp.flush()
-    tmp.close()
-    # Parse it
-    segments = _parse_rttm(tmp.name)
-    # Clean up temp file
-    import os
-
-    os.remove(tmp.name)
-    # We expect two segments parsed
-    assert len(segments) == 2
-    seg1, seg2 = segments[0], segments[1]
-    # First segment
-    assert seg1["speaker"] == "Speaker 0"
-    assert abs(seg1["start"] - 10.0) < 1e-6
-    assert abs(seg1["end"] - 15.0) < 1e-6  # 10 + 5 duration
-    # Second segment
-    assert seg2["speaker"] == "Speaker 1"
-    assert abs(seg2["start"] - 15.0) < 1e-6
-    assert abs(seg2["end"] - 18.0) < 1e-6  # 15 + 3
+    spk_ts = [
+        [0, 700, 0],
+        [900, 1700, 1],
+    ]
+    m = get_words_speaker_mapping(words, spk_ts, "start")
+    assert [w["speaker"] for w in m] == [0, 0, 1, 1, 1]
