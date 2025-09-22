@@ -1,0 +1,93 @@
+name: transcribe-diarize
+
+x-common-env: &common-env
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  HF_TOKEN: ${HF_TOKEN:-}
+  CT2_USE_CUDNN: ${CT2_USE_CUDNN:-0}
+  CT2_USE_CUBLASLT: ${CT2_USE_CUBLASLT:-1}
+  PYTHONUNBUFFERED: "1"
+  # Optional: point loguru to a file path mounted in dev/prod if you want file logs too
+  # LOG_PATH: /logs/app.log
+
+x-gpu: &gpu    # use both, Compose will ignore what it doesn't support
+  gpus: all
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - capabilities: [gpu]
+
+services:
+
+  # --------- PRODUCTION (copied code inside image; no reload) ---------
+  api-prod:
+    profiles: ["prod"]
+    image: transcribe-server:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      <<: *common-env
+    volumes:
+      # persist model caches across container restarts to avoid re-download
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+      - ${HOME}/.cache/torch:/root/.cache/torch
+      # optional: log file sink
+      # - ./logs:/logs
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    <<: *gpu
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  # --------- DEVELOPMENT (deps baked; code bind-mounted; autoreload) ---------
+  api-dev:
+    profiles: ["dev"]
+    image: transcribe-server:dev
+    build:
+      context: .
+      dockerfile: Dockerfile.dev    # installs deps + watchfiles, no code copied
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      <<: *common-env
+      LOG_LEVEL: ${LOG_LEVEL:-DEBUG} # dev: more verbose
+    volumes:
+      - ./:/app:rw
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+      - ${HOME}/.cache/torch:/root/.cache/torch
+      # optional: file logs
+      # - ./logs:/logs
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30      # allow long first warmup on cold start
+      start_period: 40s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    <<: *gpu
+    command:
+      [
+        "uvicorn",
+        "src.main:app",
+        "--host", "0.0.0.0",
+        "--port", "8000",
+        "--reload",
+        "--reload-dir", "/app/src"
+      ]

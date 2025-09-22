@@ -5,7 +5,7 @@ ENV CT2_USE_CUDNN=0
 ENV CT2_USE_CUBLASLT=1
 ENV PYTHONUNBUFFERED=1
 
-# Add NVIDIA CUDA repo and install libcudnn8 (v8 runtime)
+# OS deps
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && \
     curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb -o /tmp/cuda-keyring.deb && \
     dpkg -i /tmp/cuda-keyring.deb && rm -f /tmp/cuda-keyring.deb && \
@@ -19,22 +19,15 @@ RUN apt-get install -y --no-install-recommends ffmpeg libsndfile1 git && \
 
 WORKDIR /app
 
-# 1) install deps first to leverage Docker layer cache
+# Install only requirements (cached layer)
 COPY requirements.txt .
-RUN python -m pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+RUN python -m pip install --upgrade pip wheel setuptools && \
+    pip install --no-cache-dir -r requirements.txt && \
+    # enable uvicorn auto-reload file watcher (watchfiles)
+    pip install --no-cache-dir watchfiles
 
-# 2) copy code
-COPY . /app
-
-# Optional: make 'src' importable without --app-dir
-ENV PYTHONPATH=/app
-
-
+# no code COPY here; we’ll bind mount src/ at runtime
 EXPOSE 8000
 
-# A) using --app-dir (no PYTHONPATH needed):
-# CMD ["uvicorn", "main:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]
-
-# B) using fully-qualified module path (PYTHONPATH=/app):
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use --reload for hot code changes; app dir is src/
+CMD ["uvicorn", "main:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000", "--reload"]
