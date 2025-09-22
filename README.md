@@ -54,7 +54,7 @@ requirements.txt
 
 ### 1. Clone the repo
 ```bash
-git clone https://github.com/<your-org>/transcribe-diarize-service.git
+git clone https://github.com/marccgrau/transcribe-diarize-service.git
 cd transcribe-diarize-service
 ```
 

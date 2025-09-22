@@ -30,7 +30,6 @@ COPY . /app
 # Optional: make 'src' importable without --app-dir
 ENV PYTHONPATH=/app
 
-
 EXPOSE 8000
 
 # A) using --app-dir (no PYTHONPATH needed):
