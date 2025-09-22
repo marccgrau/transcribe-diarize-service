@@ -1,0 +1,11 @@
+[project]
+name = "transcribe-diarize-service"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ruff>=0.13.1",
+    "wget>=3.2",
+    "whisperx>=3.4.2",
+]
